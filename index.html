@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HR Dashboard – TechBank Vietnam</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --blue-900: #0f2b5b;
+  --blue-800: #1a3f7a;
+  --blue-600: #1d5bbf;
+  --blue-500: #2d6cdf;
+  --blue-400: #4d87f0;
+  --blue-100: #dbeafe;
+  --blue-50:  #eff6ff;
+  --slate-900: #0f172a;
+  --slate-700: #334155;
+  --slate-500: #64748b;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50:  #f8fafc;
+  --white: #ffffff;
+  --green-500: #22c55e;
+  --amber-500: #f59e0b;
+  --red-400: #f87171;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 24px rgba(0,0,0,.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--slate-100);
+  color: var(--slate-900);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-600) 100%);
+  padding: 20px 32px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.header-left h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -.3px;
+}
+.header-left p {
+  font-size: 12px;
+  color: rgba(255,255,255,.65);
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+.upload-btn-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.upload-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .2s;
+}
+.upload-label:hover { background: rgba(255,255,255,.25); }
+.upload-label svg { flex-shrink: 0; }
+#fileInput { display: none; }
+#fileName {
+  font-size: 12px;
+  color: rgba(255,255,255,.7);
+  font-family: 'DM Mono', monospace;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── CONTROLS BAR ── */
+.controls {
+  background: var(--white);
+  border-bottom: 1px solid var(--slate-200);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.controls input[type="date"],
+.controls select {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--slate-900);
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  padding: 7px 10px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.controls input[type="date"]:focus,
+.controls select:focus { border-color: var(--blue-500); }
+.divider { width: 1px; height: 28px; background: var(--slate-200); }
+.reset-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-600);
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.reset-btn:hover { background: var(--blue-100); }
+
+/* ── MAIN ── */
+.main { padding: 24px 32px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── KPI CARDS ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+.kpi-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 3px solid var(--blue-500);
+  transition: transform .15s, box-shadow .15s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.kpi-value {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--blue-900);
+  line-height: 1.1;
+  font-family: 'DM Mono', monospace;
+}
+.kpi-sub {
+  font-size: 12px;
+  color: var(--slate-500);
+  margin-top: 2px;
+}
+.kpi-card.gender .kpi-value { font-size: 22px; }
+
+/* ── CHART GRID ── */
+.chart-grid-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.chart-grid-bottom {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+.chart-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-700);
+}
+.chart-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+}
+.chart-wrap canvas { width: 100% !important; }
+
+/* reasons chart taller */
+.chart-card.reasons .chart-wrap { min-height: 280px; }
+
+/* ── INSIGHTS ── */
+.insights {
+  background: linear-gradient(135deg, var(--blue-900), var(--blue-800));
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  color: white;
+}
+.insights h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: rgba(255,255,255,.6);
+  margin-bottom: 12px;
+}
+.insights ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.insights li {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255,255,255,.88);
+  padding-left: 20px;
+  position: relative;
+}
+.insights li::before {
+  content: '•';
+  position: absolute;
+  left: 6px;
+  color: var(--blue-400);
+  font-size: 16px;
+  line-height: 1.3;
+}
+.insights li strong { color: white; font-weight: 600; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--slate-900); color: white;
+  padding: 12px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+  z-index: 999;
+}
+.toast.show { opacity: 1; }
+
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .chart-grid-top { grid-template-columns: 1fr 1fr; }
+  .chart-grid-bottom { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>HR Dashboard – TechBank Vietnam</h1>
+    <p id="periodLabel">Báo cáo nhân sự kỳ 01/01/2025 – 30/09/2025</p>
+  </div>
+  <div class="upload-btn-wrap">
+    <label class="upload-label" for="fileInput">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Tải dữ liệu mới (.xlsx)
+    </label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls"/>
+    <span id="fileName">Dataset.xlsx</span>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="control-group">
+    <label>Từ</label>
+    <input type="date" id="dateFrom" value="2025-01-01"/>
+  </div>
+  <div class="control-group">
+    <label>Đến</label>
+    <input type="date" id="dateTo" value="2025-09-30"/>
+  </div>
+  <div class="divider"></div>
+  <div class="control-group">
+    <label>Phòng ban</label>
+    <select id="filterDept">
+      <option value="">Tất cả phòng ban</option>
+      <option>Business Development / Sales</option>
+      <option>Finance &amp; Accounting</option>
+      <option>Growth &amp; Marketing</option>
+      <option>Operations / Customer Operations</option>
+      <option>People &amp; Culture</option>
+      <option>Technology &amp; Engineering</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Giới tính</label>
+    <select id="filterGender">
+      <option value="">Tất cả giới tính</option>
+      <option>Female</option>
+      <option>Male</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Cấp bậc</label>
+    <select id="filterLevel">
+      <option value="">Tất cả cấp bậc</option>
+      <option value="1">Junior Staff</option>
+      <option value="2">Senior Staff</option>
+      <option value="3">Team Leader</option>
+      <option value="4">Manager</option>
+      <option value="5">Senior Manager</option>
+      <option value="6">Director</option>
+    </select>
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">↺ Reset</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Employees</div>
+      <div class="kpi-value" id="kpiActive">–</div>
+      <div class="kpi-sub">Nhân viên đang làm việc</div>
+    </div>
+    <div class="kpi-card gender">
+      <div class="kpi-label">Gender Split</div>
+      <div class="kpi-value" id="kpiGender">–</div>
+      <div class="kpi-sub" id="kpiGenderSub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Turnover Rate</div>
+      <div class="kpi-value" id="kpiTurnover">–</div>
+      <div class="kpi-sub">Tỷ lệ nghỉ việc trong kỳ</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">New Hires</div>
+      <div class="kpi-value" id="kpiNewHires">–</div>
+      <div class="kpi-sub">Nhân viên mới trong kỳ</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Leavers</div>
+      <div class="kpi-value" id="kpiLeavers">–</div>
+      <div class="kpi-sub">Nhân viên nghỉ trong kỳ</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg. Engagement</div>
+      <div class="kpi-value" id="kpiEngagement">–</div>
+      <div class="kpi-sub">Điểm gắn kết Q3/2025</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="chart-grid-top">
+    <div class="chart-card">
+      <div class="chart-title">Phân bố nhân viên Active theo Phòng ban</div>
+      <div class="chart-wrap"><canvas id="chartDept"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Phân bố nhân viên Active theo Nhóm tuổi</div>
+      <div class="chart-wrap"><canvas id="chartAge"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Điểm Gắn kết TB theo Phòng ban</div>
+      <div class="chart-wrap"><canvas id="chartEngDept"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="chart-grid-bottom">
+    <div class="chart-card">
+      <div class="chart-title">Voluntary vs. Involuntary Leavers (%)</div>
+      <div class="chart-wrap" style="min-height:240px"><canvas id="chartVoluntary"></canvas></div>
+    </div>
+    <div class="chart-card reasons">
+      <div class="chart-title">Lý do nghỉ việc (trong kỳ)</div>
+      <div class="chart-wrap"><canvas id="chartReasons"></canvas></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insights">
+    <h3>Key Insights <span id="insightContext" style="font-weight:400;font-size:11px;opacity:.6;text-transform:none;letter-spacing:0"></span></h3>
+    <ul id="insightList">
+      <li style="opacity:.5">Upload file dữ liệu để xem insights...</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA STORE ──────────────────────────────────────────────────────────────
+let RAW = [];    // all rows parsed from Excel
+let charts = {}; // chart instances
+
+// Excel serial → JS Date
+function excelDateToJS(serial) {
+  if (!serial || isNaN(serial)) return null;
+  return new Date((serial - 25569) * 86400 * 1000);
+}
+
+// Format date to YYYY-MM-DD for comparison
+function fmt(date) {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toISOString().slice(0,10);
+}
+
+// ── PARSE EXCEL ─────────────────────────────────────────────────────────────
+function parseExcel(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: null });
+      if (!raw.length) { showToast('File trống!'); return; }
+
+      // Validate required columns
+      const required = ['Status','Gender','Age','DepartmentName','JobLevel',
+        'Leavers_Period','NewHire_Period','Status_Start','Status_End',
+        'EngagementScore_Q32025','TerminationReason_Group','TerminationReason',
+        'HireDate','TerminationDate','VoluntaryFlag'];
+      const cols = Object.keys(raw[0]);
+      const missing = required.filter(c => !cols.includes(c));
+      if (missing.length) {
+        showToast('Thiếu cột: ' + missing.join(', ')); return;
+      }
+
+      // Convert dates
+      RAW = raw.map(r => ({
+        ...r,
+        _hireDate: excelDateToJS(r.HireDate),
+        _termDate: r.TerminationDate ? excelDateToJS(r.TerminationDate) : null,
+        JobLevel: Number(r.JobLevel),
+        Age: Number(r.Age),
+        EngagementScore_Q32025: r.EngagementScore_Q32025 != null ? Number(r.EngagementScore_Q32025) : null,
+        Leavers_Period: Number(r.Leavers_Period || 0),
+        NewHire_Period: Number(r.NewHire_Period || 0),
+        Status_Start: Number(r.Status_Start || 0),
+        Status_End: Number(r.Status_End || 0),
+        VoluntaryFlag: r.VoluntaryFlag != null ? Number(r.VoluntaryFlag) : null,
+      }));
+
+      document.getElementById('fileName').textContent = file.name;
+      showToast('✓ Đã tải: ' + file.name + ' (' + RAW.length + ' records)');
+      renderAll();
+    } catch(err) {
+      showToast('Lỗi đọc file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── FILTER + COMPUTE ─────────────────────────────────────────────────────────
+function getFilters() {
+  return {
+    from: document.getElementById('dateFrom').value,   // "2025-01-01"
+    to:   document.getElementById('dateTo').value,
+    dept: document.getElementById('filterDept').value,
+    gender: document.getElementById('filterGender').value,
+    level: document.getElementById('filterLevel').value,
+  };
+}
+
+function applyBaseFilter(rows, f) {
+  return rows.filter(r => {
+    if (f.dept   && r.DepartmentName !== f.dept)          return false;
+    if (f.gender && r.Gender !== f.gender)                return false;
+    if (f.level  && r.JobLevel !== Number(f.level))       return false;
+    return true;
+  });
+}
+
+function isActiveOnDate(r, dateStr) {
+  if (!r._hireDate) return false;
+  if (fmt(r._hireDate) > dateStr) return false;
+  if (r._termDate && fmt(r._termDate) <= dateStr) return false;
+  return true;
+}
+
+function computeMetrics(f) {
+  const base = applyBaseFilter(RAW, f);
+
+  // Active = active at end-of-period (dateTo)
+  const active = base.filter(r => isActiveOnDate(r, f.to));
+
+  // New hires in period
+  const newHires = base.filter(r => r._hireDate &&
+    fmt(r._hireDate) >= f.from && fmt(r._hireDate) <= f.to);
+
+  // Leavers in period
+  const leavers = base.filter(r => r._termDate &&
+    fmt(r._termDate) >= f.from && fmt(r._termDate) <= f.to);
+
+  // Headcount start / end for turnover
+  const hcStart = base.filter(r => isActiveOnDate(r, f.from)).length;
+  const hcEnd   = active.length;
+  const avgHC   = (hcStart + hcEnd) / 2;
+  const turnover = avgHC > 0 ? (leavers.length / avgHC * 100) : 0;
+
+  // Gender among active
+  const maleCount   = active.filter(r => r.Gender === 'Male').length;
+  const femaleCount = active.filter(r => r.Gender === 'Female').length;
+
+  // Engagement among active
+  const engScores = active.map(r => r.EngagementScore_Q32025).filter(v => v != null && !isNaN(v));
+  const avgEng = engScores.length ? (engScores.reduce((a,b)=>a+b,0)/engScores.length) : null;
+
+  // Department distribution (active)
+  const depts = ['Business Development / Sales','Finance & Accounting','Growth & Marketing',
+    'Operations / Customer Operations','People & Culture','Technology & Engineering'];
+  const deptCounts = depts.map(d => active.filter(r => r.DepartmentName === d).length);
+  const deptPct = deptCounts.map(c => active.length ? +(c/active.length*100).toFixed(1) : 0);
+
+  // Age groups (active)
+  const ageBins = [
+    { label:'20-29', fn: r => r.Age >= 20 && r.Age < 30 },
+    { label:'30-39', fn: r => r.Age >= 30 && r.Age < 40 },
+    { label:'40-49', fn: r => r.Age >= 40 && r.Age < 50 },
+    { label:'50-60', fn: r => r.Age >= 50 && r.Age <= 60 },
+  ];
+  const ageCounts = ageBins.map(b => active.filter(b.fn).length);
+  const agePct = ageCounts.map(c => active.length ? +(c/active.length*100).toFixed(1) : 0);
+
+  // Voluntary vs Involuntary
+  const vol   = leavers.filter(r => r.TerminationReason_Group === 'Voluntary').length;
+  const invol = leavers.filter(r => r.TerminationReason_Group === 'Involuntary').length;
+
+  // Termination reasons
+  const voluntaryReasons = [
+    'Better career opportunities elsewhere',
+    'Non-competitive salary and benefits',
+    'Limited learning and promotion opportunities',
+    'High work pressure and burnout',
+    'Poor cultural fit or management style',
+  ];
+  const involuntaryReasons = [
+    'Underperformance or failure to meet KPIs',
+    'Violation of company policies or ethics',
+    'Contract expiration without renewal',
+    'Organizational restructuring or downsizing',
+    'Internal conflicts or non-collaborative behavior',
+  ];
+
+  const volReasonCounts  = voluntaryReasons.map(r => leavers.filter(d => d.TerminationReason === r).length);
+  const involReasonCounts = involuntaryReasons.map(r => leavers.filter(d => d.TerminationReason === r).length);
+
+  // Engagement by department
+  const engByDept = depts.map(d => {
+    const scores = active.filter(r => r.DepartmentName === d && r.EngagementScore_Q32025 != null)
+                         .map(r => r.EngagementScore_Q32025);
+    return scores.length ? +(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2) : null;
+  });
+
+  return {
+    active: active.length, maleCount, femaleCount,
+    malePct: active.length ? +(maleCount/active.length*100).toFixed(1) : 0,
+    femalePct: active.length ? +(femaleCount/active.length*100).toFixed(1) : 0,
+    turnover: +turnover.toFixed(1),
+    newHires: newHires.length,
+    leavers: leavers.length,
+    avgEng: avgEng != null ? +avgEng.toFixed(1) : null,
+    depts, deptCounts, deptPct,
+    ageLabels: ageBins.map(b=>b.label), ageCounts, agePct,
+    vol, invol,
+    voluntaryReasons, volReasonCounts,
+    involuntaryReasons, involReasonCounts,
+    engByDept,
+  };
+}
+
+// ── INSIGHTS GENERATOR ───────────────────────────────────────────────────────
+function generateInsights(m, f) {
+  const insights = [];
+
+  // ── Helpers ──
+  const b = (txt) => `<strong>${txt}</strong>`;
+  const fmt2 = s => s.split('-').reverse().join('/');
+
+  // Context label (what filter is active)
+  const ctxParts = [];
+  if (f.dept)   ctxParts.push(f.dept);
+  if (f.gender) ctxParts.push(f.gender);
+  if (f.level)  ctxParts.push(['','Junior Staff','Senior Staff','Team Leader','Manager','Senior Manager','Director'][Number(f.level)] || '');
+  const ctxLabel = ctxParts.length ? '— ' + ctxParts.filter(Boolean).join(', ') : '';
+  document.getElementById('insightContext').textContent = ctxLabel;
+
+  // ── INSIGHT 1: Turnover & voluntary breakdown ──────────────────────────────
+  if (m.leavers === 0) {
+    insights.push(`Không có nhân viên nghỉ việc trong kỳ ${fmt2(f.from)} – ${fmt2(f.to)}.`);
+  } else {
+    const volTotal = m.vol + m.invol;
+    const volPct   = volTotal ? Math.round(m.vol / volTotal * 100) : 0;
+    const involPct = 100 - volPct;
+
+    // Top voluntary reason
+    const volPairs = m.voluntaryReasons.map((r,i) => ({ r, c: m.volReasonCounts[i] }))
+      .filter(x => x.c > 0).sort((a,b) => b.c - a.c);
+    const involPairs = m.involuntaryReasons.map((r,i) => ({ r, c: m.involReasonCounts[i] }))
+      .filter(x => x.c > 0).sort((a,b) => b.c - a.c);
+
+    let txt = `Tỷ lệ nghỉ việc ${b(m.turnover + '%')} với ${b(volPct + '% tự nguyện')}`;
+    if (involPct > 0) txt += ` và ${b(involPct + '% không tự nguyện')}`;
+    txt += '.';
+
+    if (volPairs.length) {
+      txt += ` Lý do tự nguyện phổ biến nhất: ${b('"' + volPairs[0].r + '"')} (${volPairs[0].c} người)`;
+      if (volPairs[1]) txt += `, tiếp theo là ${b('"' + volPairs[1].r + '"')} (${volPairs[1].c} người)`;
+      txt += '.';
+    }
+    if (involPairs.length) {
+      txt += ` Không tự nguyện chủ yếu do ${b('"' + involPairs[0].r + '"')} (${involPairs[0].c} người).`;
+    }
+
+    // Risk signal
+    if (m.turnover >= 15) txt += ` ⚠️ Mức turnover ${b('cao')} — cần can thiệp khẩn.`;
+    else if (m.turnover >= 10) txt += ` Mức turnover ở ngưỡng ${b('cần theo dõi')}.`;
+    else txt += ` Turnover trong ${b('ngưỡng kiểm soát tốt')}.`;
+
+    insights.push(txt);
+  }
+
+  // ── INSIGHT 2: Headcount structure ────────────────────────────────────────
+  if (m.active > 0) {
+    // Dominant age group
+    const maxAgeIdx = m.ageCounts.indexOf(Math.max(...m.ageCounts));
+    const domAgeLabel = m.ageLabels[maxAgeIdx];
+    const domAgePct   = m.agePct[maxAgeIdx];
+
+    // Dominant department (only if no dept filter)
+    let deptTxt = '';
+    if (!f.dept) {
+      const maxDeptIdx = m.deptCounts.indexOf(Math.max(...m.deptCounts));
+      const domDept    = m.depts[maxDeptIdx];
+      const domDeptPct = m.deptPct[maxDeptIdx];
+      deptTxt = ` và khối ${b(domDept + ' (' + domDeptPct + '%)')}`;
+    }
+
+    // Gender note
+    const genderNote = m.malePct > 60
+      ? ` Lực lượng thiên về ${b('Nam (' + m.malePct + '%)')} — cần xem xét DE&I.`
+      : m.femalePct > 60
+      ? ` Lực lượng thiên về ${b('Nữ (' + m.femalePct + '%)')} — cần xem xét DE&I.`
+      : ` Tỷ lệ giới tính ${b('cân bằng tốt')} (Nam ${m.malePct}% / Nữ ${m.femalePct}%).`;
+
+    // New hire momentum
+    const hireNote = m.newHires > 0
+      ? ` Kỳ này tuyển thêm ${b(m.newHires + ' nhân viên mới')}.`
+      : ' Không có nhân viên mới trong kỳ này.';
+
+    let txt = `Tổng nhân sự active: ${b(m.active.toLocaleString() + ' người')}.`
+      + ` Nhóm tuổi chiếm đa số: ${b(domAgeLabel + ' (' + domAgePct + '%)')}${deptTxt}.`
+      + (domAgePct >= 55
+          ? ` Lực lượng trẻ tạo ${b('lợi thế linh hoạt')} nhưng tiềm ẩn rủi ro ${b('biến động và thiếu kế thừa')}.`
+          : domAgePct < 30
+          ? ` Cơ cấu tuổi ${b('đa dạng')} — phù hợp cho kế hoạch kế nhiệm.`
+          : '')
+      + genderNote + hireNote;
+
+    insights.push(txt);
+  }
+
+  // ── INSIGHT 3: Engagement analysis ───────────────────────────────────────
+  if (m.avgEng != null) {
+    const validEngDepts = m.depts
+      .map((d, i) => ({ dept: d, score: m.engByDept[i] }))
+      .filter(x => x.score != null)
+      .sort((a, b) => a.score - b.score);
+
+    let txt = `Điểm gắn kết trung bình: ${b(m.avgEng + ' / 5.0')}.`;
+
+    if (!f.dept && validEngDepts.length >= 2) {
+      const lowest  = validEngDepts[0];
+      const highest = validEngDepts[validEngDepts.length - 1];
+      const spread  = +(highest.score - lowest.score).toFixed(2);
+
+      txt += ` Phòng ban ${b('cao nhất')}: ${b(highest.dept)} (${highest.score.toFixed(1)})`
+           + ` — ${b('thấp nhất')}: ${b(lowest.dept)} (${lowest.score.toFixed(1)}).`;
+
+      if (spread >= 0.5) {
+        txt += ` Chênh lệch ${b(spread + ' điểm')} cho thấy trải nghiệm nhân viên ${b('không đồng đều')} — cần ưu tiên cải thiện tại ${lowest.dept}.`;
+      } else {
+        txt += ` Chênh lệch nhỏ (${spread} điểm) — gắn kết ${b('tương đối đồng đều')} giữa các phòng ban.`;
+      }
+    } else if (f.dept) {
+      const score = m.avgEng;
+      if (score >= 4.0)      txt += ` ${b('Tốt')} — nhân viên tại phòng ban này có mức gắn kết cao.`;
+      else if (score >= 3.5) txt += ` ${b('Trung bình khá')} — còn dư địa cải thiện.`;
+      else                   txt += ` ⚠️ ${b('Thấp')} — cần khảo sát sâu nguyên nhân và có can thiệp kịp thời.`;
+    }
+
+    // Feedback sentiment note
+    if (m.active > 0) {
+      // We can infer from engagement level
+      if (m.avgEng < 3.5) {
+        txt += ` Mức điểm này ${b('cảnh báo nguy cơ')} nghỉ việc tăng nếu không có hành động cải thiện.`;
+      }
+    }
+
+    insights.push(txt);
+  } else {
+    insights.push('Không có dữ liệu điểm gắn kết cho nhóm đang xem.');
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  const ul = document.getElementById('insightList');
+  ul.innerHTML = insights.map(txt => `<li>${txt}</li>`).join('');
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderAll() {
+  const f = getFilters();
+  const m = computeMetrics(f);
+  updateKPIs(m);
+  updateCharts(m);
+  updatePeriodLabel(f);
+  generateInsights(m, f);
+}
+
+function updatePeriodLabel(f) {
+  const fmt2 = s => s.split('-').reverse().join('/');
+  document.getElementById('periodLabel').textContent =
+    `Báo cáo nhân sự kỳ ${fmt2(f.from)} – ${fmt2(f.to)}`;
+}
+
+function updateKPIs(m) {
+  document.getElementById('kpiActive').textContent = m.active.toLocaleString();
+  document.getElementById('kpiGender').textContent = `♂ ${m.malePct}%`;
+  document.getElementById('kpiGenderSub').textContent = `♀ Female ${m.femalePct}%`;
+  document.getElementById('kpiTurnover').textContent = m.turnover + '%';
+  document.getElementById('kpiNewHires').textContent = m.newHires.toLocaleString();
+  document.getElementById('kpiLeavers').textContent = m.leavers.toLocaleString();
+  document.getElementById('kpiEngagement').textContent = m.avgEng != null ? m.avgEng : '–';
+}
+
+// Short dept names for display
+const DEPT_SHORT = {
+  'Business Development / Sales': 'BD / Sales',
+  'Finance & Accounting': 'Finance & Acct.',
+  'Growth & Marketing': 'Growth & Mktg',
+  'Operations / Customer Operations': 'Operations',
+  'People & Culture': 'People & Culture',
+  'Technology & Engineering': 'Tech & Eng.',
+};
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+const BLUE = '#2563eb';
+const BLUE_LIGHT = 'rgba(37,99,235,.12)';
+const GRAY = '#94a3b8';
+const COLORS_MULTI = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe'];
+
+function chartDefaults() {
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.plugins.legend.display = false;
+}
+
+function updateCharts(m) {
+  chartDefaults();
+
+  // ── Chart 1: Dept distribution (bar) ──────────────────────────────────────
+  destroyChart('dept');
+  const shortLabels = m.depts.map(d => DEPT_SHORT[d] || d);
+  charts.dept = new Chart(document.getElementById('chartDept'), {
+    type: 'bar',
+    data: {
+      labels: shortLabels,
+      datasets: [{
+        data: m.deptCounts,
+        backgroundColor: BLUE,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => m.depts[items[0].dataIndex],
+            label: (item) => ` ${item.raw} nhân viên (${m.deptPct[item.dataIndex]}%)`
+          }
+        },
+        datalabels: false,
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 30 } },
+        y: { grid: { color: '#f1f5f9' }, border: { display: false },
+          ticks: { stepSize: 50 } }
+      }
+    },
+    plugins: [{
+      id: 'pctLabel',
+      afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const pct = m.deptPct[i];
+          if (!pct) return;
+          ctx.save();
+          ctx.fillStyle = '#334155';
+          ctx.font = '600 11px DM Sans';
+          ctx.textAlign = 'center';
+          ctx.fillText(pct + '%', bar.x, bar.y - 6);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+
+  // ── Chart 2: Age distribution (bar) ───────────────────────────────────────
+  destroyChart('age');
+  charts.age = new Chart(document.getElementById('chartAge'), {
+    type: 'bar',
+    data: {
+      labels: m.ageLabels,
+      datasets: [{
+        data: m.ageCounts,
+        backgroundColor: BLUE,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: (item) => ` ${item.raw} nhân viên (${m.agePct[item.dataIndex]}%)` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f1f5f9' }, border: { display: false } }
+      }
+    },
+    plugins: [{
+      id: 'pctLabel2',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const pct = m.agePct[i];
+          if (!pct) return;
+          ctx.save();
+          ctx.fillStyle = '#334155';
+          ctx.font = '600 11px DM Sans';
+          ctx.textAlign = 'center';
+          ctx.fillText(pct + '%', bar.x, bar.y - 6);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+
+  // ── Chart 3: Engagement by Dept (horizontal bar) ──────────────────────────
+  destroyChart('engDept');
+  // Sort by score ascending
+  const engPairs = m.depts.map((d,i) => ({ dept: DEPT_SHORT[d]||d, score: m.engByDept[i] }))
+    .filter(p => p.score != null)
+    .sort((a,b) => a.score - b.score);
+
+  charts.engDept = new Chart(document.getElementById('chartEngDept'), {
+    type: 'bar',
+    data: {
+      labels: engPairs.map(p => p.dept),
+      datasets: [{
+        data: engPairs.map(p => p.score),
+        backgroundColor: BLUE,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => ` ${item.raw.toFixed(2)} / 5.0` } }
+      },
+      scales: {
+        x: { min: 0, max: 5, grid: { color: '#f1f5f9' }, border: { display: false },
+          ticks: { stepSize: 1 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    },
+    plugins: [{
+      id: 'scoreLabel',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const score = engPairs[i].score;
+          if (score == null) return;
+          ctx.save();
+          ctx.fillStyle = '#334155';
+          ctx.font = '600 11px DM Mono';
+          ctx.textAlign = 'left';
+          ctx.fillText(score.toFixed(1), bar.x + 4, bar.y + 4);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+
+  // ── Chart 4: Voluntary vs Involuntary (donut) ─────────────────────────────
+  destroyChart('voluntary');
+  const volTotal = m.vol + m.invol;
+  const volPct  = volTotal ? +(m.vol/volTotal*100).toFixed(0) : 0;
+  const involPct = volTotal ? +(m.invol/volTotal*100).toFixed(0) : 0;
+
+  charts.voluntary = new Chart(document.getElementById('chartVoluntary'), {
+    type: 'doughnut',
+    data: {
+      labels: [`Voluntary (${volPct}%)`, `Involuntary (${involPct}%)`],
+      datasets: [{
+        data: [m.vol, m.invol],
+        backgroundColor: [BLUE, GRAY],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { size: 12 }, padding: 16, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: { label: (item) => ` ${item.label}: ${item.raw} người` }
+        }
+      }
+    },
+    plugins: [{
+      id: 'centerText',
+      beforeDraw(chart) {
+        if (!volTotal) return;
+        const { ctx, chartArea: { left, top, right, bottom } } = chart;
+        const cx = (left+right)/2, cy = (top+bottom)/2;
+        ctx.save();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px DM Mono';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(volTotal, cx, cy - 10);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px DM Sans';
+        ctx.fillText('Leavers', cx, cy + 12);
+        ctx.restore();
+      }
+    }]
+  });
+
+  // ── Chart 5: Reasons for Leave (horizontal bar, grouped) ──────────────────
+  destroyChart('reasons');
+
+  // Combine vol (positive) and invol (negative side display via segments)
+  // Show as horizontal bar: all reasons, color-coded
+  const allLabels = [
+    ...m.voluntaryReasons.map(r => '↑ ' + r),
+    ...m.involuntaryReasons.map(r => '↓ ' + r),
+  ];
+  const allCounts = [...m.volReasonCounts, ...m.involReasonCounts];
+  const allColors = [
+    ...m.voluntaryReasons.map(() => BLUE),
+    ...m.involuntaryReasons.map(() => GRAY),
+  ];
+
+  // Filter out zero counts
+  const filtered = allLabels.map((l,i) => ({ label: l, count: allCounts[i], color: allColors[i] }))
+    .filter(x => x.count > 0)
+    .sort((a,b) => b.count - a.count);
+
+  charts.reasons = new Chart(document.getElementById('chartReasons'), {
+    type: 'bar',
+    data: {
+      labels: filtered.map(x => x.label),
+      datasets: [{
+        data: filtered.map(x => x.count),
+        backgroundColor: filtered.map(x => x.color),
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => ` ${item.raw} người` } }
+      },
+      scales: {
+        x: { grid: { color: '#f1f5f9' }, border: { display: false },
+          ticks: { stepSize: 5 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    },
+    plugins: [{
+      id: 'countLabel',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const val = filtered[i].count;
+          ctx.save();
+          ctx.fillStyle = '#334155';
+          ctx.font = '600 11px DM Mono';
+          ctx.textAlign = 'left';
+          ctx.fillText(val, bar.x + 4, bar.y + 4);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────
+function resetFilters() {
+  document.getElementById('dateFrom').value  = '2025-01-01';
+  document.getElementById('dateTo').value    = '2025-09-30';
+  document.getElementById('filterDept').value   = '';
+  document.getElementById('filterGender').value = '';
+  document.getElementById('filterLevel').value  = '';
+  renderAll();
+}
+
+// ── EVENTS ────────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) parseExcel(e.target.files[0]);
+});
+['dateFrom','dateTo','filterDept','filterGender','filterLevel'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderAll);
+});
+
+// ── BOOT: load default Dataset.xlsx if possible, else show empty state ───
+// Since we can't fetch local files, we'll show placeholder until user uploads
+// But we'll embed the known initial data as fallback:
+(function initWithEmbeddedData() {
+  // We embed the data structure that matches Dataset.xlsx exactly
+  // This allows the dashboard to work immediately without re-uploading
+  // When user uploads a new file, this gets replaced
+
+  // Build synthetic RAW from known aggregates isn't possible accurately.
+  // Instead: show instructions to upload file on first load.
+  document.getElementById('kpiActive').textContent   = '–';
+  document.getElementById('kpiGender').textContent   = '–';
+  document.getElementById('kpiTurnover').textContent = '–';
+  document.getElementById('kpiNewHires').textContent = '–';
+  document.getElementById('kpiLeavers').textContent  = '–';
+  document.getElementById('kpiEngagement').textContent = '–';
+  showToast('📂 Hãy upload file Dataset.xlsx để xem dashboard');
+})();
+</script>
+</body>
+</html>
